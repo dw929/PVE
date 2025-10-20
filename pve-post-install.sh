@@ -177,12 +177,8 @@ EOF
   else
     if [[ "$AUTO_ADD_PVE_ENTERPRISE" == "yes" ]]; then
       msg_info "Adding 'pve-enterprise' repository (deb822) (automated)"
-      cat >/etc/apt/sources.list.d/pve-enterprise.sources <<'EOF'
-Types: deb
-URIs: https://enterprise.proxmox.com/debian/pve
-Suites: trixie
-Components: pve-enterprise
-Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+      cat <<EOF >/etc/apt/sources.list.d/pve-enterprise.list
+# deb https://enterprise.proxmox.com/debian/pve bookworm pve-enterprise
 EOF
       msg_ok "Added 'pve-enterprise' repository"
     else
