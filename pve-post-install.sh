@@ -188,7 +188,11 @@ EOF
 
   # ---- CEPH-ENTERPRISE handling (if exists, keep/disable/delete) ---
   if grep -q "enterprise.proxmox.com.*ceph" /etc/apt/sources.list.d/*.sources 2>/dev/null; then
-    msg_ok "'ceph enterprise' repository already exists (kept)"
+   msg_info "Disabling 'pve-enterprise' repository"
+    cat <<EOF >/etc/apt/sources.list.d/pve-enterprise.list
+# deb https://enterprise.proxmox.com/debian/pve bookworm pve-enterprise
+EOF
+    msg_ok "Disabled 'pve-enterprise' repository"
   fi
 
   # ---- PVE-NO-SUBSCRIPTION ----
