@@ -70,7 +70,7 @@ AUTO_DISABLE_LEGACY_SOURCES="yes"
 AUTO_MIGRATE_DEB822="yes"
 AUTO_ADD_PVE_ENTERPRISE="yes"
 AUTO_PVE_ENTERPRISE_ACTION="no"   # add (because we answered yes)
-AUTO_CEPH_ENTERPRISE_ACTION="keep" # keep if exists, else we will add ceph (no-subscription)
+AUTO_CEPH_ENTERPRISE_ACTION="disable" # keep if exists, else we will add ceph (no-subscription)
 AUTO_ADD_PVE_NO_SUBSCRIPTION="yes"
 AUTO_ADD_CEPH_PACKAGES="yes"
 AUTO_ADD_PVETEST="yes"
@@ -78,8 +78,7 @@ AUTO_DISABLE_SUBSCRIPTION_NAG="yes"
 AUTO_ENABLE_HA_IF_INACTIVE="yes"
 AUTO_DISABLE_HA="no"               # user requested NOT to disable HA
 AUTO_UPDATE_SYSTEM="yes"
-AUTO_REBOOT="no                     # recommended only; script will NOT reboot automatically
-"
+AUTO_REBOOT="no"
 
 main() {
   header_info
