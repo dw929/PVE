@@ -3,11 +3,9 @@
 # Automated Proxmox VE Post-Install Script (non-interactive)
 # Based on post-pve-install.sh by tteck / MickLesk
 # Modified for fully unattended execution with preconfigured answers
+# Includes robust enterprise repo disabling logic
 #
 # Answers supplied by user (2025-10-20)
-#
-# 1=yes 2=yes 3=yes 4=yes 5=yes 6=no 7=yes 8=yes 9=no 10=no 11=yes 12=no
-# 13=no 14=disable 15=no 16=disable 17=keep 18=enable 19=yes 20=no 21=no
 
 set -euo pipefail
 
@@ -42,6 +40,31 @@ get_pve_major_minor() { IFS='.' read -r major minor _ <<<"$1"; echo "$major $min
 component_exists_in_sources() {
   local component="$1"
   grep -h -E "^[^#]*Components:[^#]*\\b${component}\\b" /etc/apt/sources.list.d/*.sources 2>/dev/null | grep -q .
+}
+
+# --- robust pve-enterprise disable ---
+disable_enterprise_repo() {
+  msg_info "Disabling any 'pve-enterprise' repository files (robust)"
+  for f in /etc/apt/sources.list.d/*.list; do
+    if grep -qi "pve-enterprise" "$f" 2>/dev/null; then
+      cp "$f" "$f".bak || true
+      sed -ri '/pve-enterprise/ s/^([^#])/# \\1/' "$f" || true
+      msg_ok "Commented enterprise lines in $f"
+    fi
+  done
+  for f in /etc/apt/sources.list.d/*.sources; do
+    if grep -qi "pve-enterprise" "$f" 2>/dev/null; then
+      cp "$f" "$f".bak || true
+      awk -v RS="" -v ORS="\n\n" '{block=$0; if (block ~ /[Cc]omponents:[[:space:]]*.*pve-enterprise/) {gsub(/^/, "# ", block)}; printf "%s", block}' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+      msg_ok "Commented enterprise stanza(s) in $f"
+    fi
+  done
+  for f in /etc/apt/sources.list.d/*pve-enterprise* 2>/dev/null; do
+    [ -e "$f" ] || continue
+    mv "$f" "$f".disabled || true
+    msg_ok "Renamed $f -> $f.disabled"
+  done
+  msg_ok "All enterprise repositories disabled"
 }
 
 run_post_common() {
@@ -81,9 +104,7 @@ EOF
   echo 'APT::Get::Update::SourceListWarnings::NonFreeFirmware "false";' >/etc/apt/apt.conf.d/no-bookworm-firmware.conf
   msg_ok "Sources corrected"
 
-  msg_info "Disabling 'pve-enterprise' repo"
-  echo '# deb https://enterprise.proxmox.com/debian/pve bookworm pve-enterprise' >/etc/apt/sources.list.d/pve-enterprise.list
-  msg_ok "Enterprise repo disabled"
+  disable_enterprise_repo
 
   msg_info "Enabling 'pve-no-subscription' repo"
   echo 'deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription' >/etc/apt/sources.list.d/pve-install-repo.list
@@ -108,15 +129,14 @@ start_routines_9() {
   msg_info "Keeping existing sources format (no migration)"
   msg_ok "Sources unchanged"
 
-  msg_info "Disabling 'pve-enterprise' repo"
-  for f in /etc/apt/sources.list.d/*.sources; do
-    grep -q 'Components:.*pve-enterprise' "$f" && sed -i '/^\s*Types:/,/^$/s/^/# /' "$f"
-  done
-  msg_ok "pve-enterprise disabled"
+  disable_enterprise_repo
 
   msg_info "Disabling 'ceph enterprise' repo"
   for f in /etc/apt/sources.list.d/*.sources; do
-    grep -q 'enterprise.proxmox.com.*ceph' "$f" && sed -i '/^\s*Types:/,/^$/s/^/# /' "$f"
+    if grep -q 'enterprise.proxmox.com.*ceph' "$f"; then
+      cp "$f" "$f".bak
+      awk -v RS="" -v ORS="\n\n" '{block=$0; if (block ~ /enterprise\.proxmox\.com.*ceph/) {gsub(/^/, "# ", block)}; printf "%s", block}' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+    fi
   done
   msg_ok "ceph enterprise disabled"
 
